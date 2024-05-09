@@ -1,0 +1,23 @@
+# Defaults paths
+data_directory: './data'
+log_directory: './logs'
+results_directory: './results'
+
+# Logging related
+batch_logging_output_inc: 100
+
+# Choosing GPUS
+gpu_ids: [0, 1] # [-1] will set CPU for use
+
+# Hyper parameters
+epochs: 3
+learning_rate: 0.0001
+# num_classes: 10
+
+# Dataset & Dataloader related
+dataset_name: 'CIFAR10'  # Can be 'CIFAR10', 'MNIST', 'FashionMNIST', 'CIFAR100' currently
+image_resize: [224, 224]
+normalization_means: [0.5, 0.5, 0.5]
+normalization_stds: [0.5, 0.5, 0.5]
+num_workers: 4
+batch_size: 64
