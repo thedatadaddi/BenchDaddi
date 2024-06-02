@@ -1,0 +1,90 @@
+2024-06-02 04:44:26,147:INFO:[GPU 1] CUDA is available: Version 12.1
+2024-06-02 04:44:26,154:INFO:[GPU 0] CUDA is available: Version 12.1
+2024-06-02 04:44:26,256:INFO:[GPU 0] Selected Device ID 0: NVIDIA GeForce RTX 3090, Compute Capability: 8.6, Total Memory: 25.44 GB
+2024-06-02 04:44:26,454:INFO:[GPU 1] Selected Device ID 1: NVIDIA GeForce RTX 3090, Compute Capability: 8.6, Total Memory: 25.44 GB
+2024-06-02 04:44:39,625:INFO:[GPU 1] Memory Allocated: 0.19 GB, Memory Reserved: 0.31 GB
+2024-06-02 04:44:39,639:INFO:[GPU 0] Memory Allocated: 0.19 GB, Memory Reserved: 0.22 GB
+2024-06-02 04:44:40,641:INFO:###############################################################################
+2024-06-02 04:44:40,641:INFO:TRAINING
+2024-06-02 04:44:40,641:INFO:###############################################################################
+2024-06-02 04:45:01,276:INFO:[GPU 1] Epoch 1, Batch 100/391, Loss: 0.978, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.049 seconds
+2024-06-02 04:45:01,277:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:45:01,279:INFO:[GPU 0] Epoch 1, Batch 100/391, Loss: 0.732, Data Transfer Time: 0.0005 seconds, Batch Exec Time: 0.060 seconds
+2024-06-02 04:45:01,280:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:45:07,208:INFO:[GPU 1] Epoch 1, Batch 200/391, Loss: 0.815, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.049 seconds
+2024-06-02 04:45:07,208:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:45:07,213:INFO:[GPU 0] Epoch 1, Batch 200/391, Loss: 0.632, Data Transfer Time: 0.0005 seconds, Batch Exec Time: 0.059 seconds
+2024-06-02 04:45:07,214:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:45:12,549:INFO:[GPU 1] Epoch 1, Batch 300/391, Loss: 0.711, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.049 seconds
+2024-06-02 04:45:12,549:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:45:12,554:INFO:[GPU 0] Epoch 1, Batch 300/391, Loss: 0.682, Data Transfer Time: 0.0004 seconds, Batch Exec Time: 0.056 seconds
+2024-06-02 04:45:12,555:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:45:18,636:INFO:[GPU 1] Epoch 1 -> Average Batch Exec Time 0.051 seconds
+2024-06-02 04:45:18,636:INFO:[GPU 1] Epoch 1 -> Average Data Transfer Time 0.000 seconds
+2024-06-02 04:45:18,636:INFO:[GPU 1] Epoch 1 -> % Average Data Transfer Time of Batch Execution Time 0.754 %
+2024-06-02 04:45:18,636:INFO:[GPU 1] Epoch 1 -> completed in 38.007 seconds
+2024-06-02 04:45:18,697:INFO:[GPU 0] Epoch 1 -> Average Batch Exec Time 0.054 seconds
+2024-06-02 04:45:18,697:INFO:[GPU 0] Epoch 1 -> Average Data Transfer Time 0.000 seconds
+2024-06-02 04:45:18,697:INFO:[GPU 0] Epoch 1 -> % Average Data Transfer Time of Batch Execution Time 0.818 %
+2024-06-02 04:45:18,697:INFO:[GPU 0] Epoch 1 -> completed in 38.052 seconds
+2024-06-02 04:45:37,486:INFO:[GPU 0] Epoch 2, Batch 100/391, Loss: 0.340, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.031 seconds
+2024-06-02 04:45:37,487:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:45:37,489:INFO:[GPU 1] Epoch 2, Batch 100/391, Loss: 0.381, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.034 seconds
+2024-06-02 04:45:37,489:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:45:41,226:INFO:[GPU 0] Epoch 2, Batch 200/391, Loss: 0.208, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.036 seconds
+2024-06-02 04:45:41,227:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:45:41,229:INFO:[GPU 1] Epoch 2, Batch 200/391, Loss: 0.315, Data Transfer Time: 0.0004 seconds, Batch Exec Time: 0.040 seconds
+2024-06-02 04:45:41,230:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:45:46,879:INFO:[GPU 0] Epoch 2, Batch 300/391, Loss: 0.224, Data Transfer Time: 0.0004 seconds, Batch Exec Time: 0.050 seconds
+2024-06-02 04:45:46,880:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:45:46,884:INFO:[GPU 1] Epoch 2, Batch 300/391, Loss: 0.304, Data Transfer Time: 0.0004 seconds, Batch Exec Time: 0.057 seconds
+2024-06-02 04:45:46,885:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:45:52,975:INFO:[GPU 1] Epoch 2 -> Average Batch Exec Time 0.046 seconds
+2024-06-02 04:45:52,975:INFO:[GPU 1] Epoch 2 -> Average Data Transfer Time 0.000 seconds
+2024-06-02 04:45:52,975:INFO:[GPU 1] Epoch 2 -> % Average Data Transfer Time of Batch Execution Time 0.858 %
+2024-06-02 04:45:52,975:INFO:[GPU 1] Epoch 2 -> completed in 34.338 seconds
+2024-06-02 04:45:53,029:INFO:[GPU 0] Epoch 2 -> Average Batch Exec Time 0.038 seconds
+2024-06-02 04:45:53,030:INFO:[GPU 0] Epoch 2 -> Average Data Transfer Time 0.000 seconds
+2024-06-02 04:45:53,030:INFO:[GPU 0] Epoch 2 -> % Average Data Transfer Time of Batch Execution Time 0.891 %
+2024-06-02 04:45:53,030:INFO:[GPU 0] Epoch 2 -> completed in 34.332 seconds
+2024-06-02 04:46:13,539:INFO:[GPU 1] Epoch 3, Batch 100/391, Loss: 0.104, Data Transfer Time: 0.0004 seconds, Batch Exec Time: 0.043 seconds
+2024-06-02 04:46:13,540:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:46:13,543:INFO:[GPU 0] Epoch 3, Batch 100/391, Loss: 0.144, Data Transfer Time: 0.0004 seconds, Batch Exec Time: 0.045 seconds
+2024-06-02 04:46:13,544:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:46:18,850:INFO:[GPU 1] Epoch 3, Batch 200/391, Loss: 0.160, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.044 seconds
+2024-06-02 04:46:18,850:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:46:18,855:INFO:[GPU 0] Epoch 3, Batch 200/391, Loss: 0.033, Data Transfer Time: 0.0005 seconds, Batch Exec Time: 0.060 seconds
+2024-06-02 04:46:18,856:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:46:24,898:INFO:[GPU 1] Epoch 3, Batch 300/391, Loss: 0.100, Data Transfer Time: 0.0003 seconds, Batch Exec Time: 0.046 seconds
+2024-06-02 04:46:24,902:INFO:[GPU 0] Epoch 3, Batch 300/391, Loss: 0.063, Data Transfer Time: 0.0004 seconds, Batch Exec Time: 0.054 seconds
+2024-06-02 04:46:24,941:INFO:[GPU 1] Memory Allocated: 0.49 GB, Memory Reserved: 0.87 GB
+2024-06-02 04:46:24,941:INFO:[GPU 0] Memory Allocated: 0.49 GB, Memory Reserved: 0.98 GB
+2024-06-02 04:46:31,197:INFO:[GPU 0] Epoch 3 -> Average Batch Exec Time 0.054 seconds
+2024-06-02 04:46:31,197:INFO:[GPU 0] Epoch 3 -> Average Data Transfer Time 0.000 seconds
+2024-06-02 04:46:31,197:INFO:[GPU 0] Epoch 3 -> % Average Data Transfer Time of Batch Execution Time 0.820 %
+2024-06-02 04:46:31,197:INFO:[GPU 0] Epoch 3 -> completed in 38.167 seconds
+2024-06-02 04:46:31,235:INFO:[GPU 1] Epoch 3 -> Average Batch Exec Time 0.044 seconds
+2024-06-02 04:46:31,235:INFO:[GPU 1] Epoch 3 -> Average Data Transfer Time 0.000 seconds
+2024-06-02 04:46:31,235:INFO:[GPU 1] Epoch 3 -> % Average Data Transfer Time of Batch Execution Time 0.762 %
+2024-06-02 04:46:31,235:INFO:[GPU 1] Epoch 3 -> completed in 38.260 seconds
+2024-06-02 04:46:32,200:INFO:###############################################################################
+2024-06-02 04:46:32,200:INFO:GLOBAL TRAINING METRICS
+2024-06-02 04:46:32,200:INFO:Total Time: 110.579 seconds
+2024-06-02 04:46:32,200:INFO:Average Batch Execution Time: 0.048 seconds
+2024-06-02 04:46:32,200:INFO:Average Batch Data Transfer Time: 0.000 seconds
+2024-06-02 04:46:32,201:INFO:% Average Batch Data Transfer Time of Batch Average Execution Time: 0.814 %
+2024-06-02 04:46:32,201:INFO:Global Training Throughput: 678.246 samples/second
+2024-06-02 04:46:32,203:INFO:###############################################################################
+2024-06-02 04:46:32,203:INFO:TESTING
+2024-06-02 04:46:32,203:INFO:###############################################################################
+2024-06-02 04:46:45,121:INFO:[GPU 1] Total Time: 1.701 seconds
+2024-06-02 04:46:45,121:INFO:[GPU 1] Average Batch Execution Time: 0.022 seconds
+2024-06-02 04:46:45,122:INFO:[GPU 1] Throughput: 2939.583 samples/second
+2024-06-02 04:46:45,210:INFO:[GPU 0] Total Time: 0.794 seconds
+2024-06-02 04:46:45,210:INFO:[GPU 0] Average Batch Execution Time: 0.010 seconds
+2024-06-02 04:46:45,210:INFO:[GPU 0] Throughput: 6297.190 samples/second
+2024-06-02 04:46:46,212:INFO:###############################################################################
+2024-06-02 04:46:46,212:INFO:GLOBAL TESTING METRICS
+2024-06-02 04:46:46,212:INFO:Total Time: 1.247 seconds
+2024-06-02 04:46:46,212:INFO:Average Batch Execution Time: 0.016 seconds
+2024-06-02 04:46:46,212:INFO:Global Testing Throughput: 4008.134 samples/second
