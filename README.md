@@ -201,7 +201,7 @@ If you use this benchmark in your research, please cite the following:
   year = {2024},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/yourusername/your-repo}},
+  howpublished = {\url{https://github.com/thedatadaddi/gpu_bm_suite.git}},
 }
 ```
 
