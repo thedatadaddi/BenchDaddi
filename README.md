@@ -1,7 +1,3 @@
-Here are some suggested improvements for clarity, consistency, and completeness:
-
----
-
 # README - GPU Benchmarking Suite
 
 ## Project Overview
