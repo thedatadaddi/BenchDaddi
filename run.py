@@ -31,7 +31,8 @@ def sum_global_throughputs(log_file_path):
 def main():
     
     log_dir = './logs'
-    shutil.rmtree(log_dir)
+    if os.path.exists(log_dir):
+        shutil.rmtree(log_dir)
     
     scripts = ['resnet50_train_test.py', 'bert_train_test.py', 'lstm_train_test.py']
     for script in scripts:
