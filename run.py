@@ -1,6 +1,7 @@
 import subprocess
 import os
 from datetime import datetime
+import shutil
 
 def run_script(script_name):
     try:
@@ -27,11 +28,14 @@ def sum_global_throughputs(log_file_path):
     return total_throughput
 
 def main():
+    
+    log_dir = './logs'
+    shutil.rmtree(log_dir)
+    
     scripts = ['resnet50_train_test.py', 'bert_train_test.py', 'lstm_train_test.py']
     for script in scripts:
         run_script(script)
     
-    log_dir = './logs'
     results_path = f"{log_dir}/results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     bm_score = 0 # Sum across all models
     for log in os.listdir(log_dir):

@@ -13,6 +13,7 @@ from datetime import datetime
 import numpy as np
 import yaml
 from ucimlrepo import fetch_ucirepo
+from torch.cuda.amp import GradScaler, autocast
 
 class TimeSeriesDataset(Dataset):
     def __init__(self, data, seq_length):
@@ -108,7 +109,7 @@ def initialize_model(input_size, hidden_size, output_size, num_layers, local_ran
     model = DDP(model, device_ids=[local_rank])
     return model
 
-def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank):
+def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
         logging.info(f'TRAINING')
@@ -116,6 +117,7 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
 
     criterion = MSELoss()
     optimizer = AdamW(model.parameters(), lr=learning_rate)
+    scaler = GradScaler(enabled=use_mixed_precision)
 
     model.train()
 
@@ -141,14 +143,16 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
             batch_data_transfer_time_list.append(data_transfer_time)
 
             optimizer.zero_grad()
-            # Forward pass
-            outputs = model(inputs)
-            outputs = outputs.squeeze(-1)  # Squeeze the last dimension
-            loss = criterion(outputs, labels)
+            with autocast(enabled=use_mixed_precision):
+                # Forward pass
+                outputs = model(inputs)
+                outputs = outputs.squeeze(-1)  # Squeeze the last dimension
+                loss = criterion(outputs, labels)
+            
             # Backward pass
-            loss.backward()
-            # Gradients are synchronized here by DDP
-            optimizer.step()
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
             batch_time = time.time() - batch_start_time
             batch_time_list.append(batch_time)
@@ -250,7 +254,7 @@ def main_worker(local_rank, config):
     os.environ['MASTER_PORT'] = config['master_port']
 
     dist.init_process_group(backend='nccl', init_method='env://', world_size=len(config['gpu_ids']), rank=local_rank)
-    setup_logging('./log', datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    setup_logging('./logs', datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
 
     print(f'[GPU {local_rank}] Setting up devices and loading data')
     device = setup_and_log_devices(config['gpu_ids'], local_rank)
@@ -265,9 +269,10 @@ def main_worker(local_rank, config):
     log_memory_usage(device, local_rank)
 
     batch_logging_output_inc = config['batch_logging_output_inc']
+    use_mixed_precision = config.get('use_mixed_precision', False)
 
     print(f'[GPU {local_rank}] Starting training')
-    train_model(model, train_loader, config['epochs'], config['learning_rate'], batch_logging_output_inc, device, local_rank)
+    train_model(model, train_loader, config['epochs'], config['learning_rate'], batch_logging_output_inc, device, local_rank, use_mixed_precision)
 
     print(f'[GPU {local_rank}] Starting testing')
     test_model(model, test_loader, batch_logging_output_inc, device, local_rank)

@@ -76,7 +76,7 @@ def initialize_model(num_labels, local_rank):
     model = DDP(model, device_ids=[local_rank])
     return model
 
-def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank):
+def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
         logging.info(f'TRAINING')
@@ -86,6 +86,8 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
     optimizer = AdamW(model.parameters(), lr=learning_rate)
     total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
+    
+    scaler = torch.cuda.amp.GradScaler(enabled=use_mixed_precision)
 
     model.train()
 
@@ -111,13 +113,14 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
             batch_data_transfer_time_list.append(data_transfer_time)
 
             optimizer.zero_grad()
-            # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            # Backward pass
-            loss.backward()
-            # Gradients are synchronized here by DDP
-            optimizer.step()
+
+            with torch.cuda.amp.autocast(enabled=use_mixed_precision):
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             scheduler.step()
 
             batch_time = time.time() - batch_start_time
@@ -167,7 +170,7 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
         logging.info(f'Global Training Throughput: {global_total_samples.item() / global_total_training_time.item():.3f} samples/second')
 
-def test_model(model, test_loader, batch_logging_output_inc, device, local_rank):
+def test_model(model, test_loader, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
         logging.info(f'TESTING')
@@ -178,7 +181,7 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank)
     num_batches = len(test_loader)
 
     model.eval()
-    with torch.no_grad():
+    with torch.cuda.amp.autocast(enabled=use_mixed_precision), torch.no_grad():
         for i, batch in enumerate(test_loader):
             inputs = batch[0].cuda(device)
             labels = batch[1].cuda(device)
@@ -219,7 +222,7 @@ def main_worker(local_rank, config):
     os.environ['MASTER_PORT'] = config['master_port']
 
     dist.init_process_group(backend='nccl', init_method='env://', world_size=len(config['gpu_ids']), rank=local_rank)
-    setup_logging('./log', datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    setup_logging('./logs', datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
 
     print(f'[GPU {local_rank}] Setting up devices and loading data')
     device = setup_and_log_devices(config['gpu_ids'], local_rank)
@@ -235,12 +238,13 @@ def main_worker(local_rank, config):
     time.sleep(1)
 
     batch_logging_output_inc = config['batch_logging_output_inc']
+    use_mixed_precision = config.get('use_mixed_precision', False)
 
     print(f'[GPU {local_rank}] Starting training')
-    train_model(model, train_loader, config['epochs'], config['learning_rate'], batch_logging_output_inc, device, local_rank)
+    train_model(model, train_loader, config['epochs'], config['learning_rate'], batch_logging_output_inc, device, local_rank, use_mixed_precision)
 
     print(f'[GPU {local_rank}] Starting testing')
-    test_model(model, test_loader, batch_logging_output_inc, device, local_rank)
+    test_model(model, test_loader, batch_logging_output_inc, device, local_rank, use_mixed_precision)
 
     print(f'[GPU {local_rank}] Benchmarking complete')
 
