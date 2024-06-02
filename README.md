@@ -1,4 +1,4 @@
-# README - GPU Benchmarking Suite
+# TDD GPU Benchmarking Suite
 
 ## Project Overview
 
@@ -195,9 +195,9 @@ Contributions are welcome! Please submit a pull request or open an issue to disc
 If you use this benchmark in your research, please cite the following:
 
 ```plaintext
-@misc{GPU Benchmark Suite,
+@misc{TDD GPU Benchmark Suite,
   author = {TheDataDaddi},
-  title = {GPU Benchmark Suite},
+  title = {TDD GPU Benchmark Suite},
   year = {2024},
   publisher = {GitHub},
   journal = {GitHub repository},
