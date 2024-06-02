@@ -1,6 +1,6 @@
 # Default paths
-data_directory: './data'
-log_directory: './logs' 
+log_directory: "./logs"
+data_directory: "./data"
 
 # Logging related
 batch_logging_output_inc: 100
@@ -12,9 +12,13 @@ master_port: '65531'
 
 # Hyper parameters
 epochs: 3
-learning_rate: 0.0001
+learning_rate: .001
+input_size: 7
+hidden_size: 50
+output_size: 1
+num_layers: 1
+seq_length: 10
 
 # Dataset & dataloader related
-num_workers: 4
 batch_size: 64
-num_classes: 10
+num_workers: 4

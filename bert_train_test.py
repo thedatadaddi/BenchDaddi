@@ -5,9 +5,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, DistributedSampler
 from torch.optim import AdamW
 from torch.nn import CrossEntropyLoss
-from torchvision import datasets, transforms, models
-from torchvision.models import resnet50, ResNet50_Weights
-from transformers import get_linear_schedule_with_warmup
+from transformers import BertTokenizer, BertForSequenceClassification, get_linear_schedule_with_warmup
+from datasets import load_dataset
 import time
 import os
 import logging
@@ -22,7 +21,7 @@ def load_config(config_path):
 def setup_logging(log_directory, current_time):
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
-    log_filename = f"{log_directory}/resnet50_tt_{current_time}.log"
+    log_filename = f"{log_directory}/bert_tt_{current_time}.log"
     logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
 def setup_and_log_devices(gpu_ids, local_rank):
@@ -52,26 +51,25 @@ def log_memory_usage(device, local_rank):
     else:
         logging.info(f"[GPU {local_rank}] CPU mode, no GPU device memory to log.")
 
-def load_data(data_directory, batch_size, num_workers, local_rank):
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
+def load_data(tokenizer, data_directory, max_length, batch_size, num_workers, local_rank):
+    dataset = load_dataset('imdb', cache_dir=data_directory)
+    
+    def tokenize_function(examples):
+        return tokenizer(examples['text'], padding='max_length', truncation=True, max_length=max_length)
 
-    train_dataset = datasets.CIFAR10(root=data_directory, train=True, download=True, transform=transform)
-    test_dataset = datasets.CIFAR10(root=data_directory, train=False, download=True, transform=transform)
+    tokenized_datasets = dataset.map(tokenize_function, batched=True)
+    tokenized_datasets.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
-    train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=local_rank)
-    test_sampler = DistributedSampler(test_dataset, num_replicas=dist.get_world_size(), rank=local_rank)
+    train_sampler = DistributedSampler(tokenized_datasets['train'], num_replicas=dist.get_world_size(), rank=local_rank)
+    test_sampler = DistributedSampler(tokenized_datasets['test'], num_replicas=dist.get_world_size(), rank=local_rank)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, sampler=test_sampler, num_workers=num_workers)
+    train_loader = DataLoader(tokenized_datasets['train'], batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
+    test_loader = DataLoader(tokenized_datasets['test'], batch_size=batch_size, sampler=test_sampler, num_workers=num_workers)
     
     return train_loader, test_loader
 
 def initialize_model(num_labels, local_rank):
-    model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
-    model.fc = torch.nn.Linear(model.fc.in_features, num_labels)
+    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_labels)
     model.cuda(local_rank)
     model = DDP(model, device_ids=[local_rank])
     return model
@@ -82,6 +80,7 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         logging.info(f'TRAINING')
         logging.info(f'###############################################################################')
 
+    
     criterion = CrossEntropyLoss()
     optimizer = AdamW(model.parameters(), lr=learning_rate)
     total_steps = len(train_loader) * epochs
@@ -104,16 +103,17 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
             batch_start_time = time.time()
 
             data_transfer_start_time = time.time()
-            inputs = batch[0].cuda(device)
-            labels = batch[1].cuda(device)
+            inputs = batch['input_ids'].cuda(device)
+            attention_masks = batch['attention_mask'].cuda(device)
+            labels = batch['label'].cuda(device)
             total_samples += inputs.size(0)
             data_transfer_time = time.time() - data_transfer_start_time
             batch_data_transfer_time_list.append(data_transfer_time)
 
             optimizer.zero_grad()
             # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            outputs = model(inputs, attention_mask=attention_masks, labels=labels)
+            loss = outputs.loss
             # Backward pass
             loss.backward()
             # Gradients are synchronized here by DDP
@@ -180,10 +180,11 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank)
     model.eval()
     with torch.no_grad():
         for i, batch in enumerate(test_loader):
-            inputs = batch[0].cuda(device)
-            labels = batch[1].cuda(device)
+            inputs = batch['input_ids'].cuda(device)
+            attention_masks = batch['attention_mask'].cuda(device)
+            labels = batch['label'].cuda(device)
             start_time = time.time()
-            outputs = model(inputs)
+            outputs = model(inputs, attention_mask=attention_masks, labels=labels)
             torch.cuda.synchronize()
 
             batch_time = time.time() - start_time
@@ -224,15 +225,15 @@ def main_worker(local_rank, config):
     print(f'[GPU {local_rank}] Setting up devices and loading data')
     device = setup_and_log_devices(config['gpu_ids'], local_rank)
 
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     train_loader, test_loader = load_data(
-        config['data_directory'], config['batch_size'], config['num_workers'], local_rank
+        tokenizer, config['data_directory'], config['max_length'], config['batch_size'], config['num_workers'], local_rank
     )
 
     print(f'[GPU {local_rank}] Initializing model')
-    model = initialize_model(config['num_classes'], local_rank)
+    model = initialize_model(config['num_labels'], local_rank)
     
     log_memory_usage(device, local_rank)
-    time.sleep(1)
 
     batch_logging_output_inc = config['batch_logging_output_inc']
 
@@ -251,4 +252,4 @@ def main(config_path):
     mp.spawn(main_worker, args=(config,), nprocs=len(gpu_ids), join=True)
 
 if __name__ == "__main__":
-    main("./config/resnet50.yaml")
+    main("./config/bert.yaml")

@@ -2,18 +2,30 @@ import torch
 import torch.multiprocessing as mp
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader, Dataset, DistributedSampler
 from torch.optim import AdamW
-from torch.nn import CrossEntropyLoss
-from torchvision import datasets, transforms, models
-from torchvision.models import resnet50, ResNet50_Weights
-from transformers import get_linear_schedule_with_warmup
+from torch.nn import MSELoss, LSTM, Linear
+import pandas as pd
 import time
 import os
 import logging
 from datetime import datetime
 import numpy as np
 import yaml
+from ucimlrepo import fetch_ucirepo
+
+class TimeSeriesDataset(Dataset):
+    def __init__(self, data, seq_length):
+        self.data = data
+        self.seq_length = seq_length
+
+    def __len__(self):
+        return len(self.data) - self.seq_length
+
+    def __getitem__(self, idx):
+        x = self.data[idx:idx + self.seq_length]
+        y = self.data[idx + self.seq_length, 0]  # Assuming the first column is the target variable
+        return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
 def load_config(config_path):
     with open(config_path, 'r') as file:
@@ -22,7 +34,7 @@ def load_config(config_path):
 def setup_logging(log_directory, current_time):
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
-    log_filename = f"{log_directory}/resnet50_tt_{current_time}.log"
+    log_filename = f"{log_directory}/lstm_tt_{current_time}.log"
     logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
 def setup_and_log_devices(gpu_ids, local_rank):
@@ -52,14 +64,20 @@ def log_memory_usage(device, local_rank):
     else:
         logging.info(f"[GPU {local_rank}] CPU mode, no GPU device memory to log.")
 
-def load_data(data_directory, batch_size, num_workers, local_rank):
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
+def load_data(data_directory, seq_length, batch_size, num_workers, local_rank):
+    df = fetch_ucirepo(id=235).data.original
+    df.replace('?', np.nan, inplace=True)
+    df = df.dropna().reset_index(drop=True)
+    df.drop(columns=['Date', 'Time'], inplace=True)
+    df = df.astype(float)
 
-    train_dataset = datasets.CIFAR10(root=data_directory, train=True, download=True, transform=transform)
-    test_dataset = datasets.CIFAR10(root=data_directory, train=False, download=True, transform=transform)
+    data = df.values
+    train_size = int(len(data) * 0.8)
+    train_data = data[:train_size]
+    test_data = data[train_size:]
+
+    train_dataset = TimeSeriesDataset(train_data, seq_length)
+    test_dataset = TimeSeriesDataset(test_data, seq_length)
 
     train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=local_rank)
     test_sampler = DistributedSampler(test_dataset, num_replicas=dist.get_world_size(), rank=local_rank)
@@ -69,9 +87,23 @@ def load_data(data_directory, batch_size, num_workers, local_rank):
     
     return train_loader, test_loader
 
-def initialize_model(num_labels, local_rank):
-    model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
-    model.fc = torch.nn.Linear(model.fc.in_features, num_labels)
+class LSTMModel(torch.nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, num_layers):
+        super(LSTMModel, self).__init__()
+        self.lstm = LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = Linear(hidden_size, output_size)
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+
+    def forward(self, x):
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        output, _ = self.lstm(x, (h_0, c_0))
+        output = self.fc(output[:, -1, :])
+        return output
+
+def initialize_model(input_size, hidden_size, output_size, num_layers, local_rank):
+    model = LSTMModel(input_size, hidden_size, output_size, num_layers)
     model.cuda(local_rank)
     model = DDP(model, device_ids=[local_rank])
     return model
@@ -82,10 +114,8 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         logging.info(f'TRAINING')
         logging.info(f'###############################################################################')
 
-    criterion = CrossEntropyLoss()
+    criterion = MSELoss()
     optimizer = AdamW(model.parameters(), lr=learning_rate)
-    total_steps = len(train_loader) * epochs
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
     model.train()
 
@@ -100,12 +130,12 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         batch_data_transfer_time_list = []
         epoch_start_time = time.time()
 
-        for step, batch in enumerate(train_loader):
+        for step, (inputs, labels) in enumerate(train_loader):
             batch_start_time = time.time()
 
             data_transfer_start_time = time.time()
-            inputs = batch[0].cuda(device)
-            labels = batch[1].cuda(device)
+            inputs = inputs.cuda(device)
+            labels = labels.cuda(device)
             total_samples += inputs.size(0)
             data_transfer_time = time.time() - data_transfer_start_time
             batch_data_transfer_time_list.append(data_transfer_time)
@@ -113,12 +143,12 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
             optimizer.zero_grad()
             # Forward pass
             outputs = model(inputs)
+            outputs = outputs.squeeze(-1)  # Squeeze the last dimension
             loss = criterion(outputs, labels)
             # Backward pass
             loss.backward()
             # Gradients are synchronized here by DDP
             optimizer.step()
-            scheduler.step()
 
             batch_time = time.time() - batch_start_time
             batch_time_list.append(batch_time)
@@ -179,11 +209,12 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank)
 
     model.eval()
     with torch.no_grad():
-        for i, batch in enumerate(test_loader):
-            inputs = batch[0].cuda(device)
-            labels = batch[1].cuda(device)
+        for i, (inputs, labels) in enumerate(test_loader):
+            inputs = inputs.cuda(device)
+            labels = labels.cuda(device)
             start_time = time.time()
             outputs = model(inputs)
+            outputs = outputs.squeeze(-1)  # Squeeze the last dimension
             torch.cuda.synchronize()
 
             batch_time = time.time() - start_time
@@ -225,14 +256,13 @@ def main_worker(local_rank, config):
     device = setup_and_log_devices(config['gpu_ids'], local_rank)
 
     train_loader, test_loader = load_data(
-        config['data_directory'], config['batch_size'], config['num_workers'], local_rank
+        config['data_directory'], config['seq_length'], config['batch_size'], config['num_workers'], local_rank
     )
 
     print(f'[GPU {local_rank}] Initializing model')
-    model = initialize_model(config['num_classes'], local_rank)
-    
+    model = initialize_model(config['input_size'], config['hidden_size'], config['output_size'], config['num_layers'], local_rank)
+
     log_memory_usage(device, local_rank)
-    time.sleep(1)
 
     batch_logging_output_inc = config['batch_logging_output_inc']
 
@@ -251,4 +281,4 @@ def main(config_path):
     mp.spawn(main_worker, args=(config,), nprocs=len(gpu_ids), join=True)
 
 if __name__ == "__main__":
-    main("./config/resnet50.yaml")
+    main("./config/lstm.yaml")
