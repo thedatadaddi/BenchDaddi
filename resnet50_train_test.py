@@ -1,3 +1,20 @@
+"""
+Description: The provided code sets up a flexible training and testing environment for a ResNet-50 model
+using PyTorch's Distributed Data Parallel (DDP) to perform image classification on the CIFAR-10 
+dataset. It supports both single and multiple GPU setups. The CIFAR-10 dataset is loaded and 
+distributed across GPUs using DistributedSampler. The ResNet-50 model, initialized with pre-trained
+weights and modified for 10 classes, is wrapped with DDP for synchronized training. The training 
+process includes AdamW optimizer, a learning rate scheduler, and mixed precision for efficiency. 
+Logging tracks training/testing metrics, including execution times and memory usage. The main 
+function handles the setup and execution, spawning processes for each GPU as specified in the 
+configuration file.
+
+Author: TheDataDaddi
+Date: 2024-02-02
+Version: 1.0
+License: MIT License
+"""
+
 import torch
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -15,16 +32,19 @@ from datetime import datetime
 import numpy as np
 import yaml
 
+# Load configuration from associated YAML file
 def load_config(config_path):
     with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
+# Setup logging to a file
 def setup_logging(log_directory, current_time):
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
     log_filename = f"{log_directory}/resnet50_tt_{current_time}.log"
     logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
+# Setup devices and log device information
 def setup_and_log_devices(gpu_ids, local_rank):
     if not torch.cuda.is_available():
         logging.info(f"[GPU {local_rank}] CUDA is not available. Using CPU.")
@@ -44,6 +64,7 @@ def setup_and_log_devices(gpu_ids, local_rank):
 
     return device
 
+# Log GPU memory usage
 def log_memory_usage(device, local_rank):
     if device.type == 'cuda':
         allocated = torch.cuda.memory_allocated(device) / 1e9
@@ -52,6 +73,7 @@ def log_memory_usage(device, local_rank):
     else:
         logging.info(f"[GPU {local_rank}] CPU mode, no GPU device memory to log.")
 
+# Load training and testing data
 def load_data(data_directory, batch_size, num_workers, local_rank):
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -69,6 +91,7 @@ def load_data(data_directory, batch_size, num_workers, local_rank):
     
     return train_loader, test_loader
 
+# Initialize the ResNet-50 model with DDP
 def initialize_model(num_labels, local_rank):
     model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
     model.fc = torch.nn.Linear(model.fc.in_features, num_labels)
@@ -76,6 +99,7 @@ def initialize_model(num_labels, local_rank):
     model = DDP(model, device_ids=[local_rank])
     return model
 
+# Train the model
 def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
@@ -170,6 +194,7 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
         logging.info(f'Global Training Throughput: {global_total_samples.item() / global_total_training_time.item():.3f} samples/second')
 
+# Test the model
 def test_model(model, test_loader, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
@@ -216,6 +241,7 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank,
         logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches * world_size):.3f} seconds')
         logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
 
+# Worker function to setup and run the training/testing
 def main_worker(local_rank, config):
     # Set the necessary environment variables
     os.environ['MASTER_ADDR'] = config['master_address']
@@ -248,6 +274,7 @@ def main_worker(local_rank, config):
 
     print(f'[GPU {local_rank}] Benchmarking complete')
 
+# Main function to load config and start training/testing
 def main(config_path):
     config = load_config(config_path)
     gpu_ids = config['gpu_ids']

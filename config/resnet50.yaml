@@ -5,7 +5,7 @@ batch_logging_output_inc: 100
 gpu_ids: [0, 1] # [-1] will set CPU for use
 master_address: 'localhost'
 master_port: '65531'
-use_mixed_precision: True
+use_mixed_precision: False
 
 # Hyper parameters
 epochs: 3

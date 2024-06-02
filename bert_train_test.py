@@ -1,3 +1,19 @@
+"""
+Description: This code sets up a distributed training and testing pipeline for a BERT model
+using PyTorch's Distributed Data Parallel (DDP). The model is designed for text classification
+using the IMDb dataset, which is preprocessed and tokenized with the Hugging Face Transformers library.
+The code includes functions for loading data, setting up logging, and initializing the model. 
+The training process utilizes the AdamW optimizer and a learning rate scheduler, with support 
+for mixed precision to enhance efficiency. The main function initializes the distributed setup 
+and spawns processes for each GPU specified in the configuration file.
+
+Author: TheDataDaddi
+Date: 2024-02-02
+Version: 1.0
+License: MIT License
+"""
+
+
 import torch
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -14,16 +30,19 @@ from datetime import datetime
 import numpy as np
 import yaml
 
+# Function to load configuration from a YAML file
 def load_config(config_path):
     with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
+# Function to set up logging to a specified directory with a timestamped log file
 def setup_logging(log_directory, current_time):
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
     log_filename = f"{log_directory}/bert_tt_{current_time}.log"
     logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
+# Function to set up and log device information
 def setup_and_log_devices(gpu_ids, local_rank):
     if not torch.cuda.is_available():
         logging.info(f"[GPU {local_rank}] CUDA is not available. Using CPU.")
@@ -43,6 +62,7 @@ def setup_and_log_devices(gpu_ids, local_rank):
 
     return device
 
+# Function to log GPU memory usage
 def log_memory_usage(device, local_rank):
     if device.type == 'cuda':
         allocated = torch.cuda.memory_allocated(device) / 1e9
@@ -51,6 +71,7 @@ def log_memory_usage(device, local_rank):
     else:
         logging.info(f"[GPU {local_rank}] CPU mode, no GPU device memory to log.")
 
+# Function to load and preprocess data
 def load_data(tokenizer, data_directory, max_length, batch_size, num_workers, local_rank):
     dataset = load_dataset('imdb', cache_dir=data_directory)
     
@@ -68,12 +89,14 @@ def load_data(tokenizer, data_directory, max_length, batch_size, num_workers, lo
     
     return train_loader, test_loader
 
+# Function to initialize the BERT model for sequence classification
 def initialize_model(num_labels, local_rank):
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_labels)
     model.cuda(local_rank)
     model = DDP(model, device_ids=[local_rank])
     return model
 
+# Function to train the model
 def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
@@ -171,6 +194,7 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
         logging.info(f'Global Training Throughput: {global_total_samples.item() / global_total_training_time.item():.3f} samples/second')
 
+# Function to test the model
 def test_model(model, test_loader, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
@@ -219,6 +243,7 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank,
         logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches * world_size):.3f} seconds')
         logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
 
+# Main worker function to set up and run training/testing
 def main_worker(local_rank, config):
     # Set the necessary environment variables
     os.environ['MASTER_ADDR'] = config['master_address']
@@ -251,6 +276,7 @@ def main_worker(local_rank, config):
 
     print(f'[GPU {local_rank}] Benchmarking complete')
 
+# Main function to load configuration and start the main worker processes
 def main(config_path):
     config = load_config(config_path)
     gpu_ids = config['gpu_ids']

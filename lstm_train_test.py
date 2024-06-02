@@ -1,3 +1,18 @@
+"""
+Description: This code sets up a distributed training and testing pipeline for a Long Short-Term Memory (LSTM) model
+using PyTorch's Distributed Data Parallel (DDP). The model is designed to perform time series forecasting
+using a dataset fetched from the UCI Machine Learning Repository. The code includes data loading with 
+a custom TimeSeriesDataset class, model definition, and training and testing functions. The training 
+process utilizes AdamW optimizer, mixed precision for efficiency, and logs various metrics, including 
+execution times and memory usage. The main function initializes the distributed setup and spawns processes 
+for each GPU specified in the configuration file.
+
+Author: TheDataDaddi
+Date: 2024-02-02
+Version: 1.0
+License: MIT License
+"""
+
 import torch
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -15,6 +30,7 @@ import yaml
 from ucimlrepo import fetch_ucirepo
 from torch.cuda.amp import GradScaler, autocast
 
+# Define a custom dataset class for time series data
 class TimeSeriesDataset(Dataset):
     def __init__(self, data, seq_length):
         self.data = data
@@ -28,16 +44,19 @@ class TimeSeriesDataset(Dataset):
         y = self.data[idx + self.seq_length, 0]  # Assuming the first column is the target variable
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
+# Function to load configuration from associated YAML file
 def load_config(config_path):
     with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
+# Function to set up logging
 def setup_logging(log_directory, current_time):
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
     log_filename = f"{log_directory}/lstm_tt_{current_time}.log"
     logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
+# Function to set up and log device information
 def setup_and_log_devices(gpu_ids, local_rank):
     if not torch.cuda.is_available():
         logging.info(f"[GPU {local_rank}] CUDA is not available. Using CPU.")
@@ -57,6 +76,7 @@ def setup_and_log_devices(gpu_ids, local_rank):
 
     return device
 
+# Function to log memory usage
 def log_memory_usage(device, local_rank):
     if device.type == 'cuda':
         allocated = torch.cuda.memory_allocated(device) / 1e9
@@ -65,6 +85,7 @@ def log_memory_usage(device, local_rank):
     else:
         logging.info(f"[GPU {local_rank}] CPU mode, no GPU device memory to log.")
 
+# Function to load data and create data loaders
 def load_data(data_directory, seq_length, batch_size, num_workers, local_rank):
     df = fetch_ucirepo(id=235).data.original
     df.replace('?', np.nan, inplace=True)
@@ -88,6 +109,7 @@ def load_data(data_directory, seq_length, batch_size, num_workers, local_rank):
     
     return train_loader, test_loader
 
+# Define the LSTM model class
 class LSTMModel(torch.nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers):
         super(LSTMModel, self).__init__()
@@ -103,12 +125,14 @@ class LSTMModel(torch.nn.Module):
         output = self.fc(output[:, -1, :])
         return output
 
+# Function to initialize the LSTM model with DDP
 def initialize_model(input_size, hidden_size, output_size, num_layers, local_rank):
     model = LSTMModel(input_size, hidden_size, output_size, num_layers)
     model.cuda(local_rank)
     model = DDP(model, device_ids=[local_rank])
     return model
 
+# Function to train the model
 def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank, use_mixed_precision):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
@@ -201,6 +225,7 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
         logging.info(f'Global Training Throughput: {global_total_samples.item() / global_total_training_time.item():.3f} samples/second')
 
+# Function to test the model
 def test_model(model, test_loader, batch_logging_output_inc, device, local_rank):
     if device.index == 0:  # Log headers only once from the main GPU
         logging.info(f'###############################################################################')
@@ -248,6 +273,7 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank)
         logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches * world_size):.3f} seconds')
         logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
 
+# Function to run the main training and testing workflow
 def main_worker(local_rank, config):
     # Set the necessary environment variables
     os.environ['MASTER_ADDR'] = config['master_address']
@@ -279,6 +305,7 @@ def main_worker(local_rank, config):
 
     print(f'[GPU {local_rank}] Benchmarking complete')
 
+# Main function to load configuration and start the main worker processes
 def main(config_path):
     config = load_config(config_path)
     gpu_ids = config['gpu_ids']
