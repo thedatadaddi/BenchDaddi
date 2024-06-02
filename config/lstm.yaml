@@ -1,7 +1,3 @@
-# Default paths
-log_directory: "./logs"
-data_directory: "./data"
-
 # Logging related
 batch_logging_output_inc: 100
 

@@ -165,7 +165,7 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         logging.info(f'Average Batch Execution Time: {global_avg_batch_exec_time.item() / (epochs * world_size):.3f} seconds')
         logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item() / (epochs * world_size):.3f} seconds')
         logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
-        logging.info(f'Throughput: {global_total_samples.item() / global_total_training_time.item():.3f} samples/second')
+        logging.info(f'Global Training Throughput: {global_total_samples.item() / global_total_training_time.item():.3f} samples/second')
 
 def test_model(model, test_loader, batch_logging_output_inc, device, local_rank):
     if device.index == 0:  # Log headers only once from the main GPU
@@ -212,7 +212,7 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank)
         logging.info(f'GLOBAL TESTING METRICS')
         logging.info(f'Total Time: {global_total_test_time.item() / world_size:.3f} seconds')
         logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches * world_size):.3f} seconds')
-        logging.info(f'Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
+        logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
 
 def main_worker(local_rank, config):
     # Set the necessary environment variables
@@ -220,14 +220,14 @@ def main_worker(local_rank, config):
     os.environ['MASTER_PORT'] = config['master_port']
 
     dist.init_process_group(backend='nccl', init_method='env://', world_size=len(config['gpu_ids']), rank=local_rank)
-    setup_logging(config['log_directory'], datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    setup_logging('./log', datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
 
     print(f'[GPU {local_rank}] Setting up devices and loading data')
     device = setup_and_log_devices(config['gpu_ids'], local_rank)
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     train_loader, test_loader = load_data(
-        tokenizer, config['data_directory'], config['max_length'], config['batch_size'], config['num_workers'], local_rank
+        tokenizer, './data', config['max_length'], config['batch_size'], config['num_workers'], local_rank
     )
 
     print(f'[GPU {local_rank}] Initializing model')
