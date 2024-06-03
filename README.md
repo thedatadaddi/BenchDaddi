@@ -1,4 +1,4 @@
-# TDD GPU Benchmarking Suite
+# BenchDaddi GPU Benchmarking Suite
 
 ## Project Overview
 
