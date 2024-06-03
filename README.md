@@ -4,6 +4,8 @@
 
 This project aims to provide a free and open-source suite of benchmarks to measure GPU performance on AI tasks. Currently, it covers three major GPU architectures: Transformers (BERT), RNNs (LSTM), and CNNs (ResNet50). More architectures and specific models will be added in subsequent versions. The project allows configuration of various model and GPU parameters. Eventually, the goal is to include all major and relevant datasets as well. Each GPU will be evaluated in terms of throughput, execution time, data transfer time, and memory usage for both training and testing (inference).
 
+[Link To YouTube Video Explanation](https://youtu.be/aCRgkRWY4gw)
+
 ## Repository Structure
 
 - `bert_train_test.py`: Benchmark script for evaluating GPUs on the BERT model with Hugging Face's publicly available [IMDB dataset](https://huggingface.co/datasets/stanfordnlp/imdb) for text classification.
