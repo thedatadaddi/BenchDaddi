@@ -260,7 +260,7 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank,
             logging.info(f'GLOBAL TESTING METRICS')
             logging.info(f'Total Time: {global_total_test_time.item():.3f} seconds')
             logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches):.3f} seconds')
-            logging.info(f'Global Testing Throughput: {global_total_samples.item() / (global_total_test_time.item() / world_size):.3f} samples/second')
+            logging.info(f'Global Testing Throughput: {global_total_samples.item() / (global_total_test_time.item()):.3f} samples/second')
 
     else:
         dist.reduce(global_total_test_time, dst=0, op=dist.ReduceOp.SUM)
