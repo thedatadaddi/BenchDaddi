@@ -55,7 +55,6 @@ def setup_and_log_devices(gpu_ids, local_rank):
         print("Using CPU by choice.")
         return torch.device("cpu")
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, gpu_ids))
     torch.cuda.set_device(local_rank)
     device = torch.device(f'cuda:{local_rank}')
     prop = torch.cuda.get_device_properties(device)
@@ -309,6 +308,7 @@ def main_worker(local_rank, config):
 def main(config_path):
     config = load_config(config_path)
     gpu_ids = config['gpu_ids']
+    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, gpu_ids))
     
     if torch.cuda.is_available():
         mp.spawn(main_worker, args=(config,), nprocs=len(gpu_ids), join=True)
