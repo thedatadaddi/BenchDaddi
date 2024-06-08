@@ -32,8 +32,8 @@ Ensure you have the following installed:
 
 1. Clone the repository:
    ```bash
-   git clone <repository_url>
-   cd <repository_name>
+   git clone git@github.com:thedatadaddi/BenchDaddi.git
+   cd BenchDaddi
    ```
 
 2. To use Conda, install Miniconda or Anaconda. [Install Miniconda](https://docs.anaconda.com/free/miniconda/miniconda-install/).
@@ -62,7 +62,7 @@ Configuration files for each model are provided in YAML format. These files incl
   batch_logging_output_inc: 100
 
   # GPU related
-  gpu_ids: [0, 1]  # [-1] will set CPU for use
+  gpu_ids: [0]  # [-1] will set CPU for use
   master_address: 'localhost'
   master_port: '65531'
   use_mixed_precision: False
@@ -84,7 +84,7 @@ Configuration files for each model are provided in YAML format. These files incl
   batch_logging_output_inc: 100
 
   # GPU related
-  gpu_ids: [0, 1]  # [-1] will set CPU for use
+  gpu_ids: [0]  # [-1] will set CPU for use
   master_address: 'localhost'
   master_port: '65531'
   use_mixed_precision: False
@@ -109,7 +109,7 @@ Configuration files for each model are provided in YAML format. These files incl
   batch_logging_output_inc: 100
 
   # GPU related
-  gpu_ids: [0, 1]  # [-1] will set CPU for use
+  gpu_ids: [0]  # [-1] will set CPU for use
   master_address: 'localhost'
   master_port: '65531'
   use_mixed_precision: False
