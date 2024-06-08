@@ -308,12 +308,12 @@ def main_worker(local_rank, config):
 def main(config_path):
     config = load_config(config_path)
     gpu_ids = config['gpu_ids']
-    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, gpu_ids))
     
-    if torch.cuda.is_available():
-        mp.spawn(main_worker, args=(config,), nprocs=len(gpu_ids), join=True)
-    else:
+    if gpu_ids[0] == -1: 
         main_worker(0, config)
+    else:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, gpu_ids))
+        mp.spawn(main_worker, args=(config,), nprocs=len(gpu_ids), join=True)
 
 if __name__ == "__main__":
     main("./config/resnet50.yaml")

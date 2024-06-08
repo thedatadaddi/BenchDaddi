@@ -34,6 +34,8 @@ def main():
     if os.path.exists(log_dir):
         shutil.rmtree(log_dir)
     
+    os.makedirs('./logs', exist_ok=True)
+    
     scripts = ['resnet50_train_test.py', 'bert_train_test.py', 'lstm_train_test.py']
     for script in scripts:
         run_script(script)

@@ -336,16 +336,16 @@ def main_worker(local_rank, config):
 
     print(f'[{device.type.upper()} {local_rank}] Benchmarking complete')
 
-# Main function to load configuration and start the main worker processes
+# Main function to load config and start training/testing
 def main(config_path):
     config = load_config(config_path)
     gpu_ids = config['gpu_ids']
-    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, gpu_ids))
     
-    if torch.cuda.is_available():
-        mp.spawn(main_worker, args=(config,), nprocs=len(gpu_ids), join=True)
-    else:
+    if gpu_ids[0] == -1: 
         main_worker(0, config)
+    else:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, gpu_ids))
+        mp.spawn(main_worker, args=(config,), nprocs=len(gpu_ids), join=True)
     
 if __name__ == "__main__":
     main("./config/lstm.yaml")
