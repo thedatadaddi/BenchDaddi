@@ -209,23 +209,6 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
         dist.reduce(global_total_training_time, dst=0, op=dist.ReduceOp.SUM)
         dist.reduce(global_max_training_time, dst=0, op=dist.ReduceOp.MAX)
         dist.reduce(global_total_samples, dst=0, op=dist.ReduceOp.SUM)
-        
-        # Gather the global total training time from all processes
-        gathered_training_times = [torch.zeros_like(global_total_training_time) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_training_times, global_total_training_time)
-        global_total_training_time_list = [t.item() for t in gathered_training_times]
-        
-        # Gather the global total samples from all processes
-        gathered_samples = [torch.zeros_like(global_total_samples) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_samples, global_total_samples)
-        global_total_samples_list = [t.item() for t in gathered_samples]
-        
-        # Calculate throughput for each GPU
-        throughput_by_gpu = []
-        for i, sample in enumerate(global_total_samples_list):
-            throughput_by_gpu.append(sample / global_total_training_time_list[i])
-        
-        global_training_throughput = sum(throughput_by_gpu)
 
         if dist.get_rank() == 0:
             time.sleep(1)
@@ -236,7 +219,6 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
             logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_exec_time.item() / (epochs * world_size):.3f} seconds')
             logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
             logging.info(f'Total Exec Time: {global_total_training_time.item() / world_size:.3f} seconds')
-            logging.info(f'Global Training Throughput: {global_training_throughput:.3f} samples/second')
             logging.info(f'Global Training Throughput: {global_total_samples.item() / global_max_training_time.item():.3f} samples/second')
         
 # Test the model
@@ -304,23 +286,6 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank,
         dist.reduce(global_total_test_time, dst=0, op=dist.ReduceOp.SUM)
         dist.reduce(global_max_test_time, dst=0, op=dist.ReduceOp.MAX)
         dist.reduce(global_total_samples, dst=0, op=dist.ReduceOp.SUM)
-        
-        # Gather the global total test time from all processes
-        gathered_test_times = [torch.zeros_like(global_total_test_time) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_test_times, global_total_test_time)
-        global_total_test_time_list = [t.item() for t in gathered_test_times]
-        
-        # Gather the global total samples from all processes
-        gathered_samples = [torch.zeros_like(global_total_samples) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_samples, global_total_samples)
-        global_total_samples_list = [t.item() for t in gathered_samples]
-        
-        # Calculate throughput for each GPU
-        throughput_by_gpu = []
-        for i, sample in enumerate(global_total_samples_list):
-            throughput_by_gpu.append(sample / global_total_test_time_list[i])
-        
-        global_test_throughput = sum(throughput_by_gpu)
 
         if local_rank == 0:
             time.sleep(1)
