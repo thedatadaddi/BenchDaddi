@@ -272,13 +272,13 @@ def test_model(model, test_loader, batch_logging_output_inc, device, local_rank,
     global_total_samples = torch.tensor([total_samples], dtype=torch.float64, device=device)
     
     if device.type == 'cpu':
-            logging.info(f'###############################################################################')
-            logging.info(f'GLOBAL TESTING METRICS')
-            logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches):.3f} seconds')
-            logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item() / (epochs):.3f} seconds')
-            logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
-            logging.info(f'Total Execution Time: {global_total_test_time.item():.3f} seconds')
-            logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
+        logging.info(f'###############################################################################')
+        logging.info(f'GLOBAL TESTING METRICS')
+        logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches):.3f} seconds')
+        logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item() / (epochs):.3f} seconds')
+        logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
+        logging.info(f'Total Execution Time: {global_total_test_time.item():.3f} seconds')
+        logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
 
     else:
         dist.reduce(global_avg_batch_exec_time, dst=0, op=dist.ReduceOp.SUM)
