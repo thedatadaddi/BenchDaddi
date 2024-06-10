@@ -29,6 +29,7 @@ import logging
 from datetime import datetime
 import numpy as np
 import yaml
+from torch.cuda.amp import GradScaler, autocast
 
 # Function to load configuration from a YAML file
 def load_config(config_path):
@@ -110,6 +111,7 @@ def initialize_model(num_labels, local_rank, device):
 
 # Function to train the model
 def train_model(model, train_loader, epochs, learning_rate, batch_logging_output_inc, device, local_rank, use_mixed_precision):
+    time.sleep(1)
     if device.index == 0 or device.type == 'cpu':  # Log headers only once from the main device
         logging.info(f'###############################################################################')
         logging.info(f'TRAINING')
@@ -120,19 +122,20 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
     total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
+    scaler = GradScaler(enabled=use_mixed_precision)
+
     model.train()
 
-    avg_batch_exec_time = 0
-    avg_batch_data_transfer_time = 0
+    ep_batch_exec_time_list = []
+    ep_batch_data_transfer_time_list = []
     total_batches = 0
     total_samples = 0
     start_time = time.time()
 
-    scaler = torch.cuda.amp.GradScaler(enabled=use_mixed_precision)
-
     for epoch in range(epochs):
         batch_time_list = []
         batch_data_transfer_time_list = []
+        total_samples_epoch = 0
         epoch_start_time = time.time()
 
         for step, batch in enumerate(train_loader):
@@ -142,13 +145,16 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
             inputs = batch['input_ids'].to(device)
             attention_masks = batch['attention_mask'].to(device)
             labels = batch['label'].to(device)
-            total_samples += inputs.size(0)
             data_transfer_time = time.time() - data_transfer_start_time
             batch_data_transfer_time_list.append(data_transfer_time)
+            
+            total_samples += inputs.size(0)
+            total_samples_epoch += inputs.size(0)
 
             optimizer.zero_grad()
+            
             # Forward pass
-            with torch.cuda.amp.autocast(enabled=use_mixed_precision):
+            with autocast(enabled=use_mixed_precision):
                 outputs = model(inputs, attention_mask=attention_masks, labels=labels)
                 loss = outputs.loss
 
@@ -167,113 +173,137 @@ def train_model(model, train_loader, epochs, learning_rate, batch_logging_output
             batch_loss = loss.item()
 
             if (step + 1) % batch_logging_output_inc == 0:
-                logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1}, Batch {step + 1}/{len(train_loader)}, Loss: {batch_loss:.3f}, Data Transfer Time: {data_transfer_time:.4f} seconds, Batch Exec Time: {batch_time:.3f} seconds')
+                logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1}, Batch {step + 1}/{len(train_loader)}, Loss: {batch_loss:.4f}, Data Transfer Time: {data_transfer_time:.4f} seconds, Batch Execution Time: {batch_time:.4f} seconds')
                 log_memory_usage(device, local_rank)
 
         avg_ep_batch_exec_time = np.mean(batch_time_list)
         avg_ep_batch_data_transfer_time = np.mean(batch_data_transfer_time_list)
         epoch_time = time.time() - epoch_start_time
 
-        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> Average Batch Exec Time {avg_ep_batch_exec_time:.3f} seconds')
-        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> Average Data Transfer Time {avg_ep_batch_data_transfer_time:.3f} seconds')
-        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> % Average Data Transfer Time of Batch Execution Time {avg_ep_batch_data_transfer_time/avg_ep_batch_exec_time*100 :.3f} %')
-        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> completed in {epoch_time:.3f} seconds')
+        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> Average Batch Execution Time {avg_ep_batch_exec_time:.4f} seconds')
+        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> Average Data Transfer Time {avg_ep_batch_data_transfer_time:.4f} seconds')
+        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> % Average Data Transfer Time of Batch Execution Time {avg_ep_batch_data_transfer_time/avg_ep_batch_exec_time*100 :.4f} %')
+        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> Total Execution Time {epoch_time:.4f} seconds')
+        logging.info(f'[{device.type.upper()} {local_rank}] Epoch {epoch + 1} -> Throughput: {total_samples_epoch/epoch_time:.4f} samples/second')
 
-        avg_batch_exec_time += avg_ep_batch_exec_time
-        avg_batch_data_transfer_time += avg_ep_batch_data_transfer_time
-
+        ep_batch_exec_time_list.append(avg_ep_batch_exec_time)
+        ep_batch_data_transfer_time_list.append(avg_ep_batch_data_transfer_time)
+        
     total_training_time = time.time() - start_time
+    
+    gpu_avg_batch_exec_time = np.mean(ep_batch_exec_time_list)
+    gpu_avg_batch_data_transfer_time = np.mean(ep_batch_data_transfer_time_list)
 
     # Aggregate global metrics across all devices
-    global_avg_batch_exec_time = torch.tensor([avg_batch_exec_time], dtype=torch.float64, device=device)
-    global_avg_batch_data_transfer_time = torch.tensor([avg_batch_data_transfer_time], dtype=torch.float64, device=device)
-    global_total_training_time = torch.tensor([total_training_time], dtype=torch.float64, device=device)
+    global_avg_batch_exec_time = torch.tensor([gpu_avg_batch_exec_time], dtype=torch.float64, device=device)
+    global_avg_batch_data_transfer_time = torch.tensor([gpu_avg_batch_data_transfer_time], dtype=torch.float64, device=device)
+    global_avg_training_time = torch.tensor([total_training_time], dtype=torch.float64, device=device)
+    global_max_training_time = torch.tensor([total_training_time], dtype=torch.float64, device=device)
     global_total_samples = torch.tensor([total_samples], dtype=torch.float64, device=device)
-    
+
     if device.type == 'cpu':
         logging.info(f'###############################################################################')
         logging.info(f'GLOBAL TRAINING METRICS')
-        logging.info(f'Total Time: {global_total_training_time.item():.3f} seconds')
-        logging.info(f'Average Batch Execution Time: {global_avg_batch_exec_time.item():.3f} seconds')
-        logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item() / (epochs):.3f} seconds')
-        logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
-        logging.info(f'Global Training Throughput: {global_total_samples.item() / global_total_training_time.item():.3f} samples/second')
-
+        logging.info(f'Average Batch Execution Time: {global_avg_batch_exec_time.item():.4f} seconds')
+        logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item():.4f} seconds')
+        logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.4f} %')
+        logging.info(f'Total Execution Time: {global_avg_training_time.item():.4f} seconds')
+        logging.info(f'Global Training Throughput: {global_total_samples.item() / global_max_training_time.item():.4f} samples/second')
+    
     else:
-        dist.reduce(global_avg_batch_exec_time, dst=0, op=dist.ReduceOp.SUM)
-        dist.reduce(global_avg_batch_data_transfer_time, dst=0, op=dist.ReduceOp.SUM)
-        dist.reduce(global_total_training_time, dst=0, op=dist.ReduceOp.SUM)
+        dist.reduce(global_avg_batch_exec_time, dst=0, op=dist.ReduceOp.AVG)
+        dist.reduce(global_avg_batch_data_transfer_time, dst=0, op=dist.ReduceOp.AVG)
+        dist.reduce(global_avg_training_time, dst=0, op=dist.ReduceOp.AVG)
+        dist.reduce(global_max_training_time, dst=0, op=dist.ReduceOp.MAX)
         dist.reduce(global_total_samples, dst=0, op=dist.ReduceOp.SUM)
 
         if local_rank == 0:
             time.sleep(1)
-            world_size = dist.get_world_size()
             logging.info(f'###############################################################################')
             logging.info(f'GLOBAL TRAINING METRICS')
-            logging.info(f'Total Time: {global_total_training_time.item() / world_size:.3f} seconds')
-            logging.info(f'Average Batch Execution Time: {global_avg_batch_exec_time.item() / (epochs * world_size):.3f} seconds')
-            logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item() / (epochs * world_size):.3f} seconds')
-            logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.3f} %')
-            logging.info(f'Global Training Throughput: {global_total_samples.item() / (global_total_training_time.item() / world_size):.3f} samples/second')
-
+            logging.info(f'Average Batch Execution Time: {global_avg_batch_exec_time.item():.4f} seconds')
+            logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item():.4f} seconds')
+            logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.4f} %')
+            logging.info(f'Total Execution Time: {global_avg_training_time.item():.4f} seconds')
+            logging.info(f'Global Training Throughput: {global_total_samples.item() / global_max_training_time.item():.4f} samples/second')
 
 # Function to test the model
 def test_model(model, test_loader, batch_logging_output_inc, device, local_rank, use_mixed_precision):
+    time.sleep(1)
     if device.index == 0 or device.type == 'cpu':  # Log headers only once from the main device
         logging.info(f'###############################################################################')
         logging.info(f'TESTING')
         logging.info(f'###############################################################################')
     
-    total_test_time = 0
+    batch_test_time_list = []
+    batch_data_transfer_time_list = []
     total_samples = 0
     num_batches = len(test_loader)
 
     model.eval()
-    with torch.no_grad():
+    with autocast(enabled=use_mixed_precision), torch.no_grad():
         for i, batch in enumerate(test_loader):
+            start_time = time.time()
+            
+            data_transfer_start_time = time.time()
             inputs = batch['input_ids'].to(device)
             attention_masks = batch['attention_mask'].to(device)
             labels = batch['label'].to(device)
-            start_time = time.time()
-            with torch.cuda.amp.autocast(enabled=use_mixed_precision):
-                outputs = model(inputs, attention_mask=attention_masks, labels=labels)
+            data_transfer_time = time.time() - data_transfer_start_time
+            batch_data_transfer_time_list.append(data_transfer_time)
+        
+            outputs = model(inputs, attention_mask=attention_masks, labels=labels)
             torch.cuda.synchronize()
 
             batch_time = time.time() - start_time
-            total_test_time += batch_time
+            batch_test_time_list.append(batch_time)
             total_samples += inputs.size(0)
 
             if (i + 1) % batch_logging_output_inc == 0:
-                logging.info(f'[{device.type.upper()} {local_rank}] Batch {i + 1}/{num_batches}, Batch Exec Time: {batch_time:.3f} seconds')
+                logging.info(f'[{device.type.upper()} {local_rank}] Batch {i + 1}/{num_batches}, Data Transfer Time: {data_transfer_time:.4f} seconds, Batch Execution Time: {batch_time:.4f} seconds')
+                
+    avg_batch_data_transfer_time = np.mean(batch_data_transfer_time_list)
+    avg_batch_exec_time = np.mean(batch_test_time_list)
+    total_test_time = sum(batch_test_time_list)  
 
-    logging.info(f'[{device.type.upper()} {local_rank}] Total Time: {total_test_time:.3f} seconds')
-    logging.info(f'[{device.type.upper()} {local_rank}] Average Batch Execution Time: {total_test_time/num_batches:.3f} seconds')
-    logging.info(f'[{device.type.upper()} {local_rank}] Throughput: {total_samples/total_test_time:.3f} samples/second')
+    logging.info(f'[{device.type.upper()} {local_rank}] Average Batch Execution Time: {total_test_time/num_batches:.4f} seconds')
+    logging.info(f'[{device.type.upper()} {local_rank}] Average Data Transfer Time {avg_batch_data_transfer_time:.4f} seconds')
+    logging.info(f'[{device.type.upper()} {local_rank}] % Average Data Transfer Time of Batch Execution Time {avg_batch_data_transfer_time/avg_batch_exec_time*100 :.4f} %')
+    logging.info(f'[{device.type.upper()} {local_rank}] Total Execution Time: {total_test_time:.4f} seconds')
+    logging.info(f'[{device.type.upper()} {local_rank}] Throughput: {total_samples/total_test_time:.4f} samples/second')
 
-    # Aggregate global metrics across all GPUs
-    global_total_test_time = torch.tensor([total_test_time], dtype=torch.float64, device=device)
+    # Aggregate global metrics across all devices
+    global_avg_batch_exec_time = torch.tensor([avg_batch_exec_time], dtype=torch.float64, device=device)
+    global_avg_batch_data_transfer_time = torch.tensor([avg_batch_data_transfer_time], dtype=torch.float64, device=device)    
+    global_avg_test_time = torch.tensor([total_test_time], dtype=torch.float64, device=device)
+    global_max_test_time = torch.tensor([total_test_time], dtype=torch.float64, device=device)
     global_total_samples = torch.tensor([total_samples], dtype=torch.float64, device=device)
-
+    
     if device.type == 'cpu':
-            logging.info(f'###############################################################################')
-            logging.info(f'GLOBAL TESTING METRICS')
-            logging.info(f'Total Time: {global_total_test_time.item():.3f} seconds')
-            logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches):.3f} seconds')
-            logging.info(f'Global Testing Throughput: {global_total_samples.item() / (global_total_test_time.item()):.3f} samples/second')
+        logging.info(f'###############################################################################')
+        logging.info(f'GLOBAL TESTING METRICS')
+        logging.info(f'Average Batch Execution Time: {global_avg_batch_exec_time.item():.4f} seconds')
+        logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item():.4f} seconds')
+        logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.4f} %')
+        logging.info(f'Total Execution Time: {global_avg_test_time.item():.4f} seconds')
+        logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_max_test_time.item():.4f} samples/second')
 
     else:
-        dist.reduce(global_total_test_time, dst=0, op=dist.ReduceOp.SUM)
+        dist.reduce(global_avg_batch_exec_time, dst=0, op=dist.ReduceOp.AVG)
+        dist.reduce(global_avg_batch_data_transfer_time, dst=0, op=dist.ReduceOp.AVG)        
+        dist.reduce(global_avg_test_time, dst=0, op=dist.ReduceOp.AVG)
+        dist.reduce(global_max_test_time, dst=0, op=dist.ReduceOp.MAX)
         dist.reduce(global_total_samples, dst=0, op=dist.ReduceOp.SUM)
 
         if local_rank == 0:
             time.sleep(1)
-            world_size = dist.get_world_size()
             logging.info(f'###############################################################################')
             logging.info(f'GLOBAL TESTING METRICS')
-            logging.info(f'Total Time: {global_total_test_time.item() / world_size:.3f} seconds')
-            logging.info(f'Average Batch Execution Time: {global_total_test_time.item() / (num_batches * world_size):.3f} seconds')
-            logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_total_test_time.item():.3f} samples/second')
-
+            logging.info(f'Average Batch Execution Time: {global_avg_batch_exec_time.item():.4f} seconds')
+            logging.info(f'Average Batch Data Transfer Time: {global_avg_batch_data_transfer_time.item():.4f} seconds')
+            logging.info(f'% Average Batch Data Transfer Time of Batch Average Execution Time: {(global_avg_batch_data_transfer_time.item() / global_avg_batch_exec_time.item()) * 100:.4f} %')
+            logging.info(f'Total Execution Time: {global_avg_test_time.item():.4f} seconds')
+            logging.info(f'Global Testing Throughput: {global_total_samples.item() / global_max_test_time.item():.4f} samples/second')
 
 # Main worker function to set up and run training/testing
 def main_worker(local_rank, config):
