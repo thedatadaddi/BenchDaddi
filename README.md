@@ -10,7 +10,7 @@ This project aims to provide a free and open-source suite of benchmarks to measu
 
 - `bert_train_test.py`: Benchmark script for evaluating GPUs on the BERT model with Hugging Face's publicly available [IMDB dataset](https://huggingface.co/datasets/stanfordnlp/imdb) for text classification.
 - `lstm_train_test.py`: Benchmark script for evaluating GPUs on the LSTM model with UCI's publicly available [Individual Household Electric Power Consumption dataset](https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) for time series forecasting.
-- `resnet50_train_test.py`: Benchmark script for evaluating GPUs on the ResNet50 model with PyTorch's available [CIFAR10 dataset](https://pytorch.org/vision/main/generated/torchvision.datasets.CIFAR10.html#torchvision.datasets.CIFAR10) for image classification.
+- `resnet50_train_test.py`: Benchmark script for evaluating GPUs on the ResNet50 model with PyTorch's available [CIFAR10 dataset](https://pytorch.org/vision/main/generated/torchvision.datasets.CIFAR10.html#torchvision.datasets.CIFAR10) for image classification. The images are resized to 256x256 to make the benchmarking scenario more realistic.
 - `gpu_max_load.py`: Script to test GPU maximum load, useful for checking thermals or server noise at maximum loading.
 - `run.py`: Main script to run the full benchmarking suite.
 - `setup.py`: Script for setting up the project environment. This script requires a version of Conda installed as it creates a Conda environment.
