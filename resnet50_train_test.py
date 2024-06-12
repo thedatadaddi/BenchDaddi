@@ -77,9 +77,10 @@ def log_memory_usage(device, local_rank):
     else:
         logging.info(f"[{device.type.upper()} {local_rank}] CPU mode, no GPU device memory to log.")
 
-# Load training and testing data
+# Load training and testing data CIFAR10
 def load_data(data_directory, batch_size, num_workers, local_rank):
     transform = transforms.Compose([
+        transforms.Resize(256),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
