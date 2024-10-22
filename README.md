@@ -17,8 +17,7 @@ For Ollama models, GPU performance is measured based on:
 - **Load Duration**: Time spent loading the model.
 - **Prompt Evaluation Duration**: Time taken to evaluate the input prompt.
 - **Response Evaluation Duration**: Time spent generating the response.
-- **Tokens per Second**: Speed of response generation, calculated as `eval_count / eval_duration * 10^9` (tokens per second).
-
+- **Tokens per Second**: Speed of response generation.
 
 This benchmark suite will eventually support all major datasets and AI models, allowing comprehensive performance comparisons across a variety of AI tasks and GPU configurations.
 
@@ -26,7 +25,9 @@ This benchmark suite will eventually support all major datasets and AI models, a
 
 ## Repository Structure
 
+
 - `bert_train_test.py`: Benchmark script for evaluating GPUs on the BERT model with Hugging Face's publicly available [IMDB dataset](https://huggingface.co/datasets/stanfordnlp/imdb) for text classification.
+   - test
 - `lstm_train_test.py`: Benchmark script for evaluating GPUs on the LSTM model with UCI's publicly available [Individual Household Electric Power Consumption dataset](https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) for time series forecasting.
 - `resnet50_train_test.py`: Benchmark script for evaluating GPUs on the ResNet50 model with PyTorch's available [CIFAR10 dataset](https://pytorch.org/vision/main/generated/torchvision.datasets.CIFAR10.html#torchvision.datasets.CIFAR10) for image classification. The images are resized to 256x256 to make the benchmarking scenario more realistic.
 - `gpu_max_load.py`: Script to test GPU maximum load, useful for checking thermals or server noise at maximum loading.
@@ -227,4 +228,4 @@ If you use this benchmark in your research, please cite the following:
 
 ## Contact
 
-For any questions or issues, please contact [skingutube22@gmail.com](mailto:skingutube22@gmail.com).
+For any questions or issues, please contact [tdd@thedatadaddi.com](mailto:tdd@thedatadaddi.com).
