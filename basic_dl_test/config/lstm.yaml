@@ -2,10 +2,10 @@
 batch_logging_output_inc: 100
 
 # GPU related
-gpu_ids: [0] # [-1] will set CPU for use
+gpu_ids: [4,5] # [-1] will set CPU for use
 master_address: 'localhost'
 master_port: '65531'
-use_mixed_precision: False
+use_mixed_precision: True
 
 # Hyper parameters
 epochs: 3
@@ -17,5 +17,6 @@ num_layers: 1
 seq_length: 10
 
 # Dataset & dataloader related
-batch_size: 64
+# batch_size: 64 # b1
+batch_size: 6400 #b2
 num_workers: 4

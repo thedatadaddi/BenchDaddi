@@ -1,0 +1,21 @@
+tests:
+
+  ### Prompt 1
+  # Purpose: Test the LLM's response time on a simple, common question, generating only a few tokens.
+  - prompt: "Explain what artificial intelligence is."
+
+  ### Prompt 2
+  # Purpose: Test the LLM's response time for a prompt that requires a slightly more detailed response with a moderate number of tokens.
+  - prompt: "Describe the process of photosynthesis in plants and how it supports the ecosystem by producing oxygen and glucose."
+
+  ### Prompt 3
+  # Purpose: Test how the LLM handles more complex subjects that require a longer, in-depth answer.
+  - prompt: "Provide a detailed explanation of quantum entanglement, covering the EPR paradox, Bell's theorem, and how entanglement is utilized in quantum computing for teleportation of information."
+
+  ### Prompt 4
+  # Purpose: Test the LLM's performance with a long-form narrative response, which might result in the generation of several paragraphs.
+  - prompt: "Write a short story about a scientist who discovers a new form of energy, but must face ethical dilemmas as governments and corporations fight over control of the technology. The story should include elements of suspense, character development, and moral conflict."
+
+  ### Prompt 5
+  # Purpose: Test the LLM's ability to generate structured content with enumerated points, which may result in a response with a consistent token count for each item.
+  - prompt: "List and explain the top 10 most important breakthroughs in artificial intelligence in the last decade, focusing on both advancements in hardware (e.g., GPUs, TPUs) and algorithms (e.g., transformers, reinforcement learning)."

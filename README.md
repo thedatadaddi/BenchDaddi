@@ -2,7 +2,25 @@
 
 ## Project Overview
 
-This project aims to provide a free and open-source suite of benchmarks to measure GPU performance on AI tasks. Currently, it covers three major GPU architectures: Transformers (BERT), RNNs (LSTM), and CNNs (ResNet50). More architectures and specific models will be added in subsequent versions. The project allows configuration of various model and GPU parameters. Eventually, the goal is to include all major and relevant datasets as well. Each GPU will be evaluated in terms of throughput, execution time, data transfer time, and memory usage for both training and testing (inference).
+This project aims to create a free and open-source benchmark suite for evaluating GPU performance on AI tasks. The current version supports deep learning tests across three major architectures: **Transformers (BERT)**, **RNNs (LSTM)**, and **CNNs (ResNet50)**. It also includes tests for **Ollama model variants** during inference. The benchmark suite is configurable, allowing users to test different model parameters and GPU configurations, with plans to expand coverage to additional architectures and models in future updates.
+
+### Deep Learning Tests
+Each GPU is evaluated across the following metrics for both training and inference:
+- **Throughput**: Number of samples processed per second.
+- **Execution Time**: Time taken for one training or inference iteration.
+- **Data Transfer Time**: Time spent transferring data between the host and the GPU.
+- **Memory Usage**: GPU memory consumption during training and inference.
+
+### Ollama Model Inference Tests
+For Ollama models, GPU performance is measured based on:
+- **Total Duration**: Overall time spent generating a response.
+- **Load Duration**: Time spent loading the model.
+- **Prompt Evaluation Duration**: Time taken to evaluate the input prompt.
+- **Response Evaluation Duration**: Time spent generating the response.
+- **Tokens per Second**: Speed of response generation, calculated as `eval_count / eval_duration * 10^9` (tokens per second).
+
+
+This benchmark suite will eventually support all major datasets and AI models, allowing comprehensive performance comparisons across a variety of AI tasks and GPU configurations.
 
 [Link To YouTube Video Explanation](https://youtu.be/aCRgkRWY4gw)
 

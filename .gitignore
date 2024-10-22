@@ -1,8 +1,9 @@
 data
-logs
+logs*
 notes.txt
 old
 logs_old
 notes
 nohup.out
 results*
+__pycache__
