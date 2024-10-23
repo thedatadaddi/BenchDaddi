@@ -4,7 +4,7 @@
 
 This project aims to create a free and open-source benchmark suite for evaluating GPU performance on AI tasks. The current version supports **standard deep learning tests** across three major architectures: **Transformers (BERT)**, **RNNs (LSTM)**, and **CNNs (ResNet50)**. It also includes **tests for Ollama model variants during inference**. The benchmark suite is configurable, allowing users to test different model parameters and GPU configurations, with plans to expand coverage to additional architectures and models in future updates.
 
-### Standard Deep Learning Tests (./standard_dl_test)
+### Standard Deep Learning (DL) Tests (./standard_dl_test)
 
 [Link To YouTube Video Explanation of Standard DL Test](https://youtu.be/aCRgkRWY4gw)
 
