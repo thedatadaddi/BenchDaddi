@@ -42,6 +42,9 @@ Ensure you have the following installed:
 - Python 3.8 or higher (3.10 recommended)
 - CUDA compatible GPU(s)
 - NVIDIA CUDA Toolkit and cuDNN
+- Docker must be installed. Below are links to outline that process if needed.
+   - Docker Desktop Installation Instructions: https://www.docker.com/get-started/
+   - Docker Engine (No GUI) Installation Instructions: https://docs.docker.com/engine/install/ubuntu/
 
 ### Installation
 
