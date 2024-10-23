@@ -15,7 +15,7 @@ This project aims to create a free and open-source benchmark suite for evaluatin
 
 ## Repository Structure
 
-- `dtandard_dl_test`
+- `standard_dl_test`
    - `config`
       - `bert.yaml`: Configuration file for the BERT model.
       - `lstm.yaml`: Configuration file for the LSTM model.
