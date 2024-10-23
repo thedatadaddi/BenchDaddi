@@ -1,3 +1,17 @@
+"""
+Description: This script loads test prompts from a YAML file and performs multiple runs of model inference 
+using a local API for a specified LLM model (e.g., llama3.1). It logs GPU utilization data, collects metrics 
+from the API response (e.g., total duration, tokens per second), and averages the results over multiple runs. 
+Each test prompt's results are saved to uniquely named log files, and key metrics and example responses are 
+logged. The script supports monitoring loaded GPUs via the nvidia-smi command.
+
+Author: TheDataDaddi
+Date: 2024-10-22
+Version: 1.0
+License: MIT License
+"""
+
+
 import subprocess
 import requests
 import json

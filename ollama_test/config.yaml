@@ -2,13 +2,13 @@
 test_file: "test_prompts.yaml"
 # Number of times to test with each prompt
 test_runs: 5
-# Flag to use Ollama defualt volume for speed up if set True
+# Flag to use Ollama defualt volume for speed up if set True. Please ensure you have enough system resources to support this. Other wise run with flag to True to avoid storage issues. 
 ollama_vol_flag: True
 # Flag to automatical remove ollama volume after run
 remove_ollama_vol_flag: False
 # List of models to try in ASCENDING SIZE
 model_list: ['llama3.1:8b-instruct-q4_0', 'llama3.1:8b-instruct-q8_0', 'llama3.1:8b-instruct-fp16']
-# List of GPU_IDs to test
+# List of GPU_IDs to test. Examples could be [[0]] or [[0,1]] or [[cpu]]. 
 gpu_id_lists: [
   [cpu]
 ]

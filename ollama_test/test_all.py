@@ -1,3 +1,18 @@
+"""
+Description: This script automates the process of running Docker containers for various GPU 
+and model combinations to evaluate AI model performance using Ollama's API. It pulls the 
+required models, runs tests, and ensures that the models are loaded and accessible via HTTP 
+requests. The script supports volume management, container cleanup, and GPU selection 
+based on configuration settings provided in a YAML file. Additionally, it integrates prompt 
+testing functionality and manages container lifecycle events such as creation, stopping, and removal.
+
+Author: TheDataDaddi
+Date: 2024-10-22
+Version: 1.0
+License: MIT License
+"""
+
+
 import yaml
 import subprocess
 import os

@@ -1,3 +1,19 @@
+"""
+Description: This script processes log files from GPU performance tests and extracts key metrics 
+related to model inference, such as total duration, load duration, prompt evaluation, response 
+evaluation, and tokens per second. It also handles cases where no data was collected for a prompt. 
+The results are summarized in a CSV file, with each row representing a log file's metrics. 
+Log file names are expected to follow the format 'gpu_ids.model_name.prompt_num.log'. The script 
+uses regex patterns to match the necessary metrics and outputs the data into a structured CSV.
+
+Author: TheDataDaddi
+Date: 2024-10-22
+Version: 1.0
+License: MIT License
+"""
+
+
+
 import os
 import csv
 import re
