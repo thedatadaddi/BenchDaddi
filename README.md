@@ -26,7 +26,7 @@ This project aims to create a free and open-source benchmark suite for evaluatin
    - `run.py`: Main script to run the standard DL test suite.
 - `ollama_test`
    - `config.yaml`: Configuration file for for ollama test suite
-   - `log_2_csv.yaml`: Converts the output in ./logs (created when ./test_all.py is run) to more easily ingestible CSV file.
+   - `log_2_csv.py`: Converts the output in ./logs (created when ./test_all.py is run) to more easily ingestible CSV file.
    - `test_all.py`: This is the main script to run to test with Ollama. It automates running Docker containers for different GPU and model combinations, pulling models via Ollama's API, and ensuring they are accessible for prompt testing. It manages container lifecycle events, GPU selection, and volume handling based on a YAML configuration file.
    - `test_model_prompts.py`: This script loads test prompts from a YAML file, runs multiple inference tests on a specified LLM model via a local API, and logs key performance metrics such as total duration, tokens per second, and GPU utilization. The results are averaged across test runs, saved to uniquely named log files, and include example responses from the model for each prompt.
    - `test_prompts.yaml`: A YAML file containing all prompts to be tested. 
