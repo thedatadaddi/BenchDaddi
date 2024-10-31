@@ -10,7 +10,7 @@ This project aims to create a free and open-source benchmark suite for evaluatin
 
 ### Ollama Model Inference Tests (./ollama_test)
 
-[Link To YouTube Video Explanation of Ollama Inference Tests](https://youtu.be/aCRgkRWY4gw)
+[Link To YouTube Video Explanation of Ollama Inference Tests](https://youtu.be/1kJczOUZXcs)
 
 
 ## Repository Structure
