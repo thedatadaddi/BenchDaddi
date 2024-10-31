@@ -8,7 +8,8 @@ ollama_vol_flag: True
 remove_ollama_vol_flag: False
 # List of models to try in ASCENDING SIZE
 model_list: ['llama3.1:8b-instruct-q4_0', 'llama3.1:8b-instruct-q8_0', 'llama3.1:8b-instruct-fp16']
-# List of GPU_IDs to test. Examples could be [[0]] or [[0,1]] or [[cpu]]. 
+# List of GPU_IDs to test. Examples could be [[0]] or [[0,1]] or [['cpu']]. 
+# To test multiple GPU configs add more sub lists. For example: [[0], [0,1], [0,1,3]] 
 gpu_id_lists: [
-  [cpu]
+  [0]
 ]
